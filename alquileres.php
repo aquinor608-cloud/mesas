@@ -1,6 +1,16 @@
 <?php
 require_once 'database.php';
 
+// Importar clases de PHPMailer si existe la carpeta PHPMailer
+if (file_exists('PHPMailer/src/PHPMailer.php')) {
+    require 'PHPMailer/src/Exception.php';
+    require 'PHPMailer/src/PHPMailer.php';
+    require 'PHPMailer/src/SMTP.php';
+}
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -11,47 +21,37 @@ $error = '';
 $ultimo_id_recibo = null;
 
 // Precios configurados
-$precio_mesa = 2.00; // $2.00 USD por mesa
-$precio_silla = 1.00; // $1.00 USD por silla
+$precio_mesa = 2.00;
+$precio_silla = 1.00;
 
-// Obtener paquetes de la base de datos
+// Obtener paquetes
 $paquetes = $pdo->query("SELECT * FROM configuracion_precios WHERE tipo_item = 'paquete'")->fetchAll();
 
-// Función para enviar recibo por correo (Cliente + Copia a ti)
-function enviarReciboMailNativo($email_destino, $nombre_cliente, $id_recibo, $nombre_paquete, $cant_mesas, $cant_sillas, $costo_total, $observaciones) {
-    $tu_correo_personal = "aquiror608@gmail.com"; // Tu correo para recibir copia automática
-    
+// Función para enviar la factura por correo mediante PHPMailer / mail()
+function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombre_paquete, $cant_mesas, $cant_sillas, $costo_total, $observaciones) {
+    $tu_correo = "aquiror608@gmail.com";
     $num_factura = str_pad($id_recibo, 6, '0', STR_PAD_LEFT);
     $fecha_actual = date('d/m/Y h:i A');
     $asunto = "Comprobante Oficial de Alquiler N° #$num_factura - Control Mobiliario";
 
-    // Cabeceras de correo en formato HTML
-    $headers  = "MIME-Version: 1.0" . "\r\n";
-    $headers .= "Content-type: text/html; charset=UTF-8" . "\r\n";
-    $headers .= "From: Control Mobiliario <no-reply@controlmobiliario.com>" . "\r\n";
-    $headers .= "Reply-To: Control Mobiliario <$tu_correo_personal>" . "\r\n";
-    $headers .= "Bcc: " . $tu_correo_personal . "\r\n"; // Te envía copia oculta a ti siempre
-
-    // Plantilla de Recibo HTML
+    // Plantilla HTML de la factura
     $mensaje_html = "
     <!DOCTYPE html>
     <html lang='es'>
-    <head>
-        <meta charset='UTF-8'>
-    </head>
+    <head><meta charset='UTF-8'></head>
     <body style='font-family: Arial, sans-serif; background-color: #f8fafc; padding: 20px; color: #0f172a;'>
         <div style='max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
             <div style='border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px;'>
-                <h2 style='color: #2563eb; margin: 0; font-size: 24px;'>CONTROL MOBILIARIO</h2>
-                <small style='color: #64748b;'>Comprobante Oficial de Alquiler N° #$num_factura ($fecha_actual)</small>
+                <h2 style='color: #2563eb; margin: 0;'>CONTROL MOBILIARIO</h2>
+                <small style='color: #64748b;'>Comprobante Oficial N° #$num_factura ($fecha_actual)</small>
             </div>
 
-            <p style='font-size: 15px;'>Estimado/a <strong>$nombre_cliente</strong>,</p>
-            <p style='font-size: 14px; color: #334155;'>Gracias por contratar con nosotros. A continuación se detalla la liquidación de su servicio de alquiler:</p>
+            <p>Estimado/a <strong>$nombre_cliente</strong>,</p>
+            <p>Se ha generado el recibo oficial correspondiente a su alquiler de mobiliario:</p>
 
             <table style='width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;'>
                 <thead>
-                    <tr style='background-color: #f1f5f9; text-align: left; color: #475569;'>
+                    <tr style='background-color: #f1f5f9; text-align: left;'>
                         <th style='padding: 10px; border-bottom: 2px solid #cbd5e1;'>Concepto</th>
                         <th style='padding: 10px; border-bottom: 2px solid #cbd5e1;'>Detalle</th>
                     </tr>
@@ -77,21 +77,55 @@ function enviarReciboMailNativo($email_destino, $nombre_cliente, $id_recibo, $no
             </table>
 
             <div style='margin-top: 20px; background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 13px; color: #475569;'>
-                <strong>Observaciones / Notas:</strong> " . ($observaciones ? htmlspecialchars($observaciones) : 'Sin observaciones adicionales.') . "
+                <strong>Observaciones:</strong> " . ($observaciones ? htmlspecialchars($observaciones) : 'Sin detalles adicionales.') . "
             </div>
             
             <hr style='border: none; border-top: 1px solid #e2e8f0; margin-top: 30px;'>
-            <p style='font-size: 11px; color: #94a3b8; text-align: center;'>Este comprobante ha sido generado automáticamente por el sistema de Control Mobiliario.</p>
+            <p style='font-size: 11px; color: #94a3b8; text-align: center;'>Comprobante emitido automáticamente por Control Mobiliario.</p>
         </div>
     </body>
     </html>
     ";
 
-    // Envío a través de la función mail()
+    // Intento 1: Intentar envío mediante PHPMailer con SMTP si existen credenciales
+    if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        try {
+            $mail = new PHPMailer(true);
+            
+            // Configuración del servidor SMTP (Ajustar con tus datos de Gmail o Brevo si usas SMTP)
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'aquiror608@gmail.com'; 
+            $mail->Password   = 'contrasena_de_aplicacion_aqui'; // Tu contraseña de aplicación de 16 letras
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = 587;
+            $mail->CharSet    = 'UTF-8';
+
+            $mail->setFrom('aquiror608@gmail.com', 'Control Mobiliario');
+            $mail->addAddress($email_destino, $nombre_cliente); // Envío al cliente
+            $mail->addBCC($tu_correo); // Copia oculta a ti
+
+            $mail->isHTML(true);
+            $mail->Subject = $asunto;
+            $mail->Body    = $mensaje_html;
+
+            return $mail->send();
+        } catch (Exception $e) {
+            // Si falla SMTP, intenta con mail() nativo como fallback
+        }
+    }
+
+    // Intento 2: Fallback con la función mail() nativa de PHP
+    $headers  = "MIME-Version: 1.0\r\n";
+    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+    $headers .= "From: Control Mobiliario <no-reply@controlmobiliario.com>\r\n";
+    $headers .= "Bcc: $tu_correo\r\n";
+
     return @mail($email_destino, $asunto, $mensaje_html, $headers);
 }
 
-// Procesar nuevo alquiler
+// Procesar alquiler
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'crear_alquiler') {
     $solicitante = trim($_POST['solicitante']);
     $email_cliente = trim($_POST['email_cliente']);
@@ -128,11 +162,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
             $pdo->beginTransaction();
 
             $total_piezas = $cantidad_mesas + $cantidad_sillas;
-            $stmt = $pdo->prepare("INSERT INTO prestamos (solicitante, email_cliente, cantidad, observaciones, costo_total, detalle_paquete, estado, fecha_prestamo) VALUES (?, ?, ?, ?, ?, ?, 'Activo', NOW())");
+            $stmt = $pdo->prepare("INSERT INTO prestamos (solicitante, email_cliente, cantidad, observaciones, costo_total, detalle_paquete, estado) VALUES (?, ?, ?, ?, ?, ?, 'Activo')");
             $stmt->execute([$solicitante, $email_cliente, $total_piezas, $observaciones, $costo_total, $nombre_paquete]);
             $ultimo_id_recibo = $pdo->lastInsertId();
 
-            // Descontar del inventario disponible
+            // Descontar inventario
             if ($cantidad_mesas > 0) {
                 $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'mesa'")->execute([$cantidad_mesas, $cantidad_mesas]);
             }
@@ -142,22 +176,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
 
             $pdo->commit();
 
-            // Despachar el correo al cliente + copia Bcc a ti
+            // Enviar correo si se especificó email
             if (!empty($email_cliente)) {
-                enviarReciboMailNativo($email_cliente, $solicitante, $ultimo_id_recibo, $nombre_paquete, $cantidad_mesas, $cantidad_sillas, $costo_total, $observaciones);
+                enviarFacturaCorreo($email_cliente, $solicitante, $ultimo_id_recibo, $nombre_paquete, $cantidad_mesas, $cantidad_sillas, $costo_total, $observaciones);
             }
 
-            $mensaje = "¡Alquiler registrado exitosamente! Recibo enviado a <strong>" . htmlspecialchars($email_cliente) . "</strong> y copia a <strong>aquiror608@gmail.com</strong>.";
+            $mensaje = "¡Alquiler registrado exitosamente! Se ha despachado la factura por correo a <strong>" . htmlspecialchars($email_cliente) . "</strong> y copia de respaldo a <strong>aquiror608@gmail.com</strong>.";
 
         } catch (Exception $ex) {
             $pdo->rollBack();
-            $error = "Error al registrar el alquiler: " . $ex->getMessage();
+            $error = "Error al procesar el alquiler: " . $ex->getMessage();
         }
     }
 }
 
-// Consultar historial de alquileres
-$alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR detalle_paquete IS NOT NULL ORDER BY fecha_prestamo DESC")->fetchAll();
+// Consultar lista
+$alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR detalle_paquete IS NOT NULL ORDER BY id DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -196,7 +230,7 @@ $alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR deta
     <main class="container py-5">
         <div class="mb-4">
             <h2 class="fw-bold text-dark"><i class="fa-solid fa-cash-register text-success me-2"></i> Gestión de Alquileres Comercial</h2>
-            <p class="text-muted">Tarifas unitarias ($2.00/Mesa, $1.00/Silla) con emisión de recibos y envío automático.</p>
+            <p class="text-muted">Registro de contratos con generación y despacho de recibos digitales por correo electrónico.</p>
         </div>
 
         <div class="row g-4">
@@ -209,9 +243,8 @@ $alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR deta
                             <?= $mensaje ?>
                             <?php if ($ultimo_id_recibo): ?>
                                 <hr>
-                                <a href="recibo.php?id=<?= $ultimo_id_recibo ?>" target="_blank" class="btn btn-sm btn-success fw-semibold w-100"><i class="fa-solid fa-receipt me-1"></i> Ver Recibo / Guardar PDF</a>
+                                <a href="recibo.php?id=<?= $ultimo_id_recibo ?>" target="_blank" class="btn btn-sm btn-success fw-semibold w-100"><i class="fa-solid fa-receipt me-1"></i> Abrir Recibo en PDF</a>
                                 <script>
-                                    // Abre el recibo profesional automáticamente en una nueva pestaña
                                     window.open('recibo.php?id=<?= $ultimo_id_recibo ?>', '_blank');
                                 </script>
                             <?php endif; ?>
@@ -259,10 +292,10 @@ $alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR deta
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Observaciones</label>
-                            <textarea name="observaciones" class="form-control" rows="2" placeholder="Detalles del alquiler..."></textarea>
+                            <textarea name="observaciones" class="form-control" rows="2" placeholder="Detalles del evento..."></textarea>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-100 fw-semibold py-2"><i class="fa-solid fa-paper-plane me-1"></i> Registrar y Emitir Recibo</button>
+                        <button type="submit" class="btn btn-success w-100 fw-semibold py-2"><i class="fa-solid fa-paper-plane me-1"></i> Registrar y Enviar Factura</button>
                     </form>
                 </div>
             </div>
@@ -275,7 +308,7 @@ $alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR deta
                             <thead class="table-light">
                                 <tr>
                                     <th>Cliente / Correo</th>
-                                    <th>Modalidad / Paquete</th>
+                                    <th>Modalidad</th>
                                     <th>Costo Total</th>
                                     <th>Estado</th>
                                     <th class="text-center">Recibo</th>
@@ -283,7 +316,7 @@ $alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR deta
                             </thead>
                             <tbody>
                                 <?php if (empty($alquileres)): ?>
-                                    <tr><td colspan="5" class="text-center py-4 text-muted">No hay contratos de alquiler registrados.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-4 text-muted">No hay registros de alquileres.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($alquileres as $a): ?>
                                         <tr>
