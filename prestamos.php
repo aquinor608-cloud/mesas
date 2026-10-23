@@ -1,5 +1,26 @@
 <?php
+// prestamos.php corregido y optimizado
 require_once 'database.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+// Asegurar que la tabla de préstamos exista para evitar errores
+$pdo->exec("CREATE TABLE IF NOT EXISTS prestamos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER,
+    responsable TEXT NOT NULL,
+    fecha_prestamo TEXT NOT NULL,
+    fecha_prevista_devolucion TEXT NOT NULL,
+    cant_mesas_prestadas INTEGER DEFAULT 0,
+    cant_sillas_prestadas INTEGER DEFAULT 0,
+    estado TEXT DEFAULT 'Activo',
+    observaciones TEXT,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+)");
+
 $mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_prestamo'])) {
@@ -35,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_prestamo'])
     }
 }
 
-$prestamos = $pdo->query("SELECT p.*, u.nombre as usuario FROM prestamos p JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.id DESC")->fetchAll();
+$prestamos = $pdo->query("SELECT p.*, u.nombre as usuario FROM prestamos p LEFT JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.id DESC")->fetchAll();
 $inv_disp = $pdo->query("SELECT tipo, cantidad_disponible FROM inventario_recursos")->fetchAll(PDO::FETCH_KEY_PAIR);
 ?>
 <!DOCTYPE html>
@@ -140,7 +161,7 @@ $inv_disp = $pdo->query("SELECT tipo, cantidad_disponible FROM inventario_recurs
                         <?php else: foreach ($prestamos as $p): ?>
                             <tr>
                                 <td><?= $p['id'] ?></td>
-                                <td><strong><?= htmlspecialchars($p['responsable']) ?></strong><br><small class="text-muted">Reg: <?= htmlspecialchars($p['usuario']) ?></small></td>
+                                <td><strong><?= htmlspecialchars($p['responsable']) ?></strong><br><small class="text-muted">Reg: <?= htmlspecialchars($p['usuario'] ?? 'Sistema') ?></small></td>
                                 <td class="small">Del: <?= $p['fecha_prestamo'] ?><br>Al: <?= $p['fecha_prevista_devolucion'] ?></td>
                                 <td><span class="badge bg-primary">Mesas: <?= $p['cant_mesas_prestadas'] ?></span><br><span class="badge bg-secondary">Sillas: <?= $p['cant_sillas_prestadas'] ?></span></td>
                                 <td><span class="badge bg-success"><?= $p['estado'] ?></span></td>

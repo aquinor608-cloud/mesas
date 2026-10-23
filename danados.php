@@ -1,10 +1,22 @@
 <?php
+// danados.php corregido y optimizado
 require_once 'database.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
+
+// Asegurar que la tabla exista automáticamente para evitar errores de PDO
+$pdo->exec("CREATE TABLE IF NOT EXISTS inventario_danados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL,
+    cantidad INTEGER NOT NULL,
+    mes INTEGER NOT NULL,
+    anio INTEGER NOT NULL,
+    motivo TEXT,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+)");
 
 $mensaje = '';
 $error = '';

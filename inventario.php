@@ -1,4 +1,5 @@
 <?php
+// inventario.php corregido
 require_once 'database.php';
 $mensaje = '';
 
@@ -84,22 +85,22 @@ $recursos = $pdo->query("SELECT * FROM inventario_recursos")->fetchAll();
     <div class="col-md-6 mb-4">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 text-capitalize"><i class="fa-solid fa-<?= $rec['tipo'] === 'mesa' ? 'table' : 'chair' ?>"></i> <?= $rec['tipo'] ?>s</h5>
-                <span class="badge bg-success"><?= $rec['estado'] ?></span>
+                <h5 class="mb-0 text-capitalize"><i class="fa-solid fa-<?= ($rec['tipo'] ?? '') === 'mesa' ? 'table' : 'chair' ?>"></i> <?= htmlspecialchars($rec['tipo'] ?? 'Recurso') ?>s</h5>
+                <span class="badge bg-success"><?= htmlspecialchars($rec['estado'] ?? 'Disponible') ?></span>
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush mb-3">
-                    <li class="list-group-item d-flex justify-content-between"><span>Cantidad Total:</span> <strong><?= $rec['cantidad_total'] ?></strong></li>
-                    <li class="list-group-item d-flex justify-content-between text-success"><span>Disponibles:</span> <strong><?= $rec['cantidad_disponible'] ?></strong></li>
-                    <li class="list-group-item d-flex justify-content-between text-warning"><span>Reservadas:</span> <strong><?= $rec['cantidad_reservada'] ?></strong></li>
-                    <li class="list-group-item d-flex justify-content-between text-danger"><span>Prestadas:</span> <strong><?= $rec['cantidad_prestada'] ?></strong></li>
+                    <li class="list-group-item d-flex justify-content-between"><span>Cantidad Total:</span> <strong><?= $rec['cantidad_total'] ?? 0 ?></strong></li>
+                    <li class="list-group-item d-flex justify-content-between text-success"><span>Disponibles:</span> <strong><?= $rec['cantidad_disponible'] ?? 0 ?></strong></li>
+                    <li class="list-group-item d-flex justify-content-between text-warning"><span>Reservadas:</span> <strong><?= $rec['cantidad_reservada'] ?? 0 ?></strong></li>
+                    <li class="list-group-item d-flex justify-content-between text-danger"><span>Prestadas:</span> <strong><?= $rec['cantidad_prestada'] ?? 0 ?></strong></li>
                 </ul>
 
-                <?php if ($_SESSION['rol'] === 'admin'): ?>
+                <?php if (($_SESSION['rol'] ?? '') === 'admin'): ?>
                 <form method="POST" class="row g-2 align-items-center">
-                    <input type="hidden" name="tipo" value="<?= $rec['tipo'] ?>">
+                    <input type="hidden" name="tipo" value="<?= htmlspecialchars($rec['tipo'] ?? '') ?>">
                     <div class="col-8">
-                        <input type="number" name="cantidad_total" class="form-control" value="<?= $rec['cantidad_total'] ?>" min="0" required>
+                        <input type="number" name="cantidad_total" class="form-control" value="<?= $rec['cantidad_total'] ?? 0 ?>" min="0" required>
                     </div>
                     <div class="col-4">
                         <button type="submit" name="actualizar_inventario" class="btn btn-primary w-100"><i class="fa-solid fa-save"></i> Actualizar</button>
