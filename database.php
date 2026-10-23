@@ -9,11 +9,13 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-    // Creación automática de tablas en SQLite si no existen
+    // Creación automática de tablas en SQLite
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario TEXT NOT NULL UNIQUE,
+            email TEXT,
+            nombre TEXT,
             password TEXT NOT NULL,
             rol TEXT DEFAULT 'admin'
         );
@@ -49,6 +51,19 @@ try {
         );
     ");
 
+    // Intentar agregar la columna email si la tabla ya existía de antes
+    try {
+        $pdo->exec("ALTER TABLE usuarios ADD COLUMN email TEXT;");
+    } catch (Exception $e) {
+        // La columna ya existe, ignorar error
+    }
+
+    try {
+        $pdo->exec("ALTER TABLE usuarios ADD COLUMN nombre TEXT;");
+    } catch (Exception $e) {
+        // La columna ya existe, ignorar error
+    }
+
     // Insertar datos iniciales si el inventario está vacío
     $stmt = $pdo->query("SELECT COUNT(*) FROM inventario_recursos");
     if ($stmt->fetchColumn() == 0) {
@@ -57,8 +72,8 @@ try {
             ('mesa', 20000, 20000, 0, 0),
             ('silla', 30000, 30000, 0, 0);
 
-            INSERT INTO usuarios (usuario, password, rol) VALUES
-            ('admin', '$2y$10$e0MYzXyjpJS7Pd0RVvHwHe1e8L/0zI/kOq5F3K7.Wq6rL8PqW1K2a', 'admin');
+            INSERT INTO usuarios (usuario, email, nombre, password, rol) VALUES
+            ('admin', 'aquiror608@gmail.com', 'Administrador', '$2y$10$e0MYzXyjpJS7Pd0RVvHwHe1e8L/0zI/kOq5F3K7.Wq6rL8PqW1K2a', 'admin');
 
             INSERT INTO configuracion_precios (tipo_item, concepto, mesas_incluidas, sillas_incluidas, precio) VALUES
             ('paquete', 'Paquete Básico (1 Mesa + 4 Sillas)', 1, 4, 5.00),
