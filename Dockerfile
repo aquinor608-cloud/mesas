@@ -1,12 +1,16 @@
+# Usamos una imagen oficial de PHP con Apache
 FROM php:8.2-apache
 
-# Instalar extensión SQLite y PDO SQLite
-RUN apt-get update && apt-get install -y libsqlite3-dev && docker-php-ext-install pdo_sqlite
+# Actualizamos el sistema e instalamos las librerías necesarias para PostgreSQL
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Copiar el código del proyecto
+# Habilitar mod_rewrite de Apache por si tu proyecto usa URLs amigables
+RUN a2enmod rewrite
+
+# Copiar el código fuente al directorio web de Apache
 COPY . /var/www/html/
 
-# Dar permisos completos a la carpeta web para que SQLite pueda guardar/modificar datos
-RUN chown -R www-data:www-data /var/www/html && chmod -R 777 /var/www/html
-
-EXPOSE 80
+# Dar permisos adecuados
+RUN chown -R www-data:www-data /var/www/html
