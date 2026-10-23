@@ -247,7 +247,7 @@ $ultimos_prestamos = $pdo->query("SELECT * FROM prestamos WHERE estado IN ('Acti
                                 <div class="d-flex align-items-center">
                                     <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 me-3"><i class="fa-solid fa-file-invoice-dollar fs-5"></i></div>
                                     <div>
-                                        <div class="fw-bold">Gestión de Alquileres_mi Comercial</div>
+                                        <div class="fw-bold">Gestión de Alquileres_ mi comercial Comercial</div>
                                         <small class="text-muted">Paquetes, cobro libre y emisión de recibos</small>
                                     </div>
                                 </div>
