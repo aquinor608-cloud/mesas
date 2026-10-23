@@ -97,7 +97,7 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = 'aquiror608@gmail.com'; 
-            $mail->Password   = 'contrasena_de_aplicacion_aqui'; // Tu contraseña de aplicación de 16 letras
+            $mail->Password   = 'ufvlnuuicuituncr'; // Tu contraseña de aplicación de 16 letras
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
             $mail->CharSet    = 'UTF-8';
