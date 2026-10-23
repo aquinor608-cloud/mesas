@@ -9,11 +9,11 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-    // Creación automática de tablas en SQLite
+    // Creación de tablas sin restricciones rígidas en 'usuario'
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario TEXT NOT NULL UNIQUE,
+            usuario TEXT,
             email TEXT,
             nombre TEXT,
             password TEXT NOT NULL,
@@ -51,18 +51,9 @@ try {
         );
     ");
 
-    // Intentar agregar la columna email si la tabla ya existía de antes
-    try {
-        $pdo->exec("ALTER TABLE usuarios ADD COLUMN email TEXT;");
-    } catch (Exception $e) {
-        // La columna ya existe, ignorar error
-    }
-
-    try {
-        $pdo->exec("ALTER TABLE usuarios ADD COLUMN nombre TEXT;");
-    } catch (Exception $e) {
-        // La columna ya existe, ignorar error
-    }
+    // Asegurar que existan las columnas email y nombre si la tabla fue creada antes
+    try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN email TEXT;"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN nombre TEXT;"); } catch (Exception $e) {}
 
     // Insertar datos iniciales si el inventario está vacío
     $stmt = $pdo->query("SELECT COUNT(*) FROM inventario_recursos");
