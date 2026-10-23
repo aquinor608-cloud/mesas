@@ -97,7 +97,7 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = 'aquiror608@gmail.com'; 
-            $mail->Password   = 'ufvlnuuicuituncr'; // Tu contraseña de aplicación de 16 letras
+            $mail->Password   = 'ufvlnuuicuituncr'; 
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
             $mail->CharSet    = 'UTF-8';
@@ -112,7 +112,8 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
 
             return $mail->send();
         } catch (Exception $e) {
-            // Si falla SMTP, intenta con mail() nativo como fallback
+            // Muestra el error exacto en pantalla si Gmail rechaza la conexión
+            die("Error exacto de PHPMailer: " . $e->getMessage());
         }
     }
 
