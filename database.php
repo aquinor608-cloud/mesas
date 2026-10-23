@@ -9,7 +9,7 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-    // Creación de tablas sin restricciones rígidas en 'usuario'
+    // Creación de todas las tablas necesarias
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +41,26 @@ try {
             fecha_prestamo DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS reservas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            solicitante TEXT NOT NULL,
+            email_cliente TEXT,
+            mesas INTEGER DEFAULT 0,
+            sillas INTEGER DEFAULT 0,
+            fecha_evento DATE,
+            observaciones TEXT,
+            estado TEXT DEFAULT 'Pendiente',
+            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS danados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL,
+            cantidad INTEGER NOT NULL,
+            motivo TEXT,
+            fecha_reporte DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS configuracion_precios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo_item TEXT NOT NULL,
@@ -51,7 +71,7 @@ try {
         );
     ");
 
-    // Asegurar que existan las columnas email y nombre si la tabla fue creada antes
+    // Compatibilidad para columnas adicionales
     try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN email TEXT;"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN nombre TEXT;"); } catch (Exception $e) {}
 
