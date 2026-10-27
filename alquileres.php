@@ -24,15 +24,35 @@ $ultimo_id_recibo = null;
 $precio_mesa = 2.00;
 $precio_silla = 1.00;
 
-// Obtener paquetes
-$paquetes = $pdo->query("SELECT * FROM configuracion_precios WHERE tipo_item = 'paquete'")->fetchAll();
+// Envío de correo mediante la API HTTP de Resend
+    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq';
 
-// Función para enviar la factura por correo mediante PHPMailer / mail()
-function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombre_paquete, $cant_mesas, $cant_sillas, $costo_total, $observaciones) {
-    $tu_correo = "aquiror608@gmail.com";
-    $num_factura = str_pad($id_recibo, 6, '0', STR_PAD_LEFT);
-    $fecha_actual = date('d/m/Y h:i A');
-    $asunto = "Comprobante Oficial de Alquiler N° #$num_factura - Control Mobiliario";
+    $data = [
+        'from'    => 'Control Mobiliario <onboarding@resend.dev>',
+        'to'      => [$email_destino],
+        'subject' => $asunto,
+        'html'    => $mensaje_html
+    ];
+
+    $ch = curl_init('https://api.resend.com/emails');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $api_key,
+        'Content-Type: application/json'
+    ]);
+
+    $response = curl_exec($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        error_log("Error de Resend: " . $err);
+        return false;
+    }
+
+    return true;
 
     // Plantilla HTML de la factura
     $mensaje_html = "
