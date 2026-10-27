@@ -195,7 +195,7 @@ if ($cantidad_sillas > 0) {
 }
 
 // Consultar lista
-$alquileres = $pdo->query("SELECT * FROM prestamos WHERE costo_total > 0 OR detalle_paquete IS NOT NULL ORDER BY id DESC")->fetchAll();
+$alquileres = $pdo->query("SELECT /* refresh_cache */ * FROM prestamos ORDER BY id DESC");
 ?>
 <!DOCTYPE html>
 <html lang="es">
