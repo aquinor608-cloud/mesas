@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
     $prestamo = $stmt->fetch();
 
     if ($prestamo) {
-        $dev_prev = $pdo->prepare("SELECT SUM(cant_mesas_devueltas) as mesas_tot, SUM(cant_sillas_devueltas) as sillas_tot FROM detalles_devoluciones WHERE prestamo_id = ?");
+        $dev_prev = $pdo->prepare("SELECT /* refresh_cache */ SUM(cant_mesas_devueltas) as mesas_tot, SUM(cant_sillas_devueltas) as sillas_tot FROM detalles_devoluciones WHERE prestamo_id = ?");
         $dev_prev->execute([$prestamo_id]);
         $acumulado = $dev_prev->fetch();
 
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
     }
 }
 
-$prestamos_activos = $pdo->query("SELECT * FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC")->fetchAll();
+$resultado = $pdo->query("SELECT * FROM /* refresh_cache */ prestamos ...");
 $historial_devs = $pdo->query("SELECT d.*, p.responsable FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
