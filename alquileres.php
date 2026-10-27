@@ -87,14 +87,14 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
     </html>
     ";
 
- // Envío de correo mediante la API HTTP de Resend (100% compatible con Render)
-    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq'; // Pega aquí tu clave que empieza por re_
+ // Envío de correo mediante la API HTTP de Resend
+    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq'; // Tu API Key actual de Resend
 
     $data = [
-        'from' => 'Control Mobiliario <onboarding@resend.dev>',
-        'to'   => [$email_destino, $tu_correo],
+        'from'    => 'Control Mobiliario <onboarding@resend.dev>',
+        'to'      => [$email_destino], // Lee la dirección ingresada en el formulario
         'subject' => $asunto,
-        'html' => $mensaje_html
+        'html'    => $mensaje_html
     ];
 
     $ch = curl_init('https://api.resend.com/emails');
