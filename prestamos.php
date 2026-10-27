@@ -8,18 +8,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Asegurar que la tabla de préstamos exista para evitar errores
-$pdo->exec("CREATE TABLE IF NOT EXISTS prestamos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    usuario_id INTEGER,
-    responsable TEXT NOT NULL,
-    fecha_prestamo TEXT NOT NULL,
-    fecha_prevista_devolucion TEXT NOT NULL,
-    cant_mesas_prestadas INTEGER DEFAULT 0,
-    cant_sillas_prestadas INTEGER DEFAULT 0,
-    estado TEXT DEFAULT 'Activo',
-    observaciones TEXT,
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
-)");
 
 $mensaje = '';
 
