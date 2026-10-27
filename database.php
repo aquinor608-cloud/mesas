@@ -3,7 +3,7 @@
 $host = 'ep-crimson-bird-b5fytrpgz-pooler.c-7.us-east-2.aws.neon.tech';
 $db   = 'neondb';
 $user = 'neondb_owner';
-$pass = 'npg_fosrZqun8t2E'; // Copiada usando "Show password" en la imagen
+$pass = 'npg_ZST6lnh3VKdi'; 
 $port = '5432';
 
 try {
