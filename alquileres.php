@@ -1,16 +1,6 @@
 <?php
 require_once 'database.php';
 
-// Importar clases de PHPMailer si existe la carpeta PHPMailer
-if (file_exists('PHPMailer/src/PHPMailer.php')) {
-    require 'PHPMailer/src/Exception.php';
-    require 'PHPMailer/src/PHPMailer.php';
-    require 'PHPMailer/src/SMTP.php';
-}
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -24,35 +14,21 @@ $ultimo_id_recibo = null;
 $precio_mesa = 2.00;
 $precio_silla = 1.00;
 
-// Envío de correo mediante la API HTTP de Resend
-    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq';
-
-    $data = [
-        'from'    => 'Control Mobiliario <onboarding@resend.dev>',
-        'to'      => [$email_destino],
-        'subject' => $asunto,
-        'html'    => $mensaje_html
-    ];
-
-    $ch = curl_init('https://api.resend.com/emails');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $api_key,
-        'Content-Type: application/json'
-    ]);
-
-    $response = curl_exec($ch);
-    $err = curl_error($ch);
-    curl_close($ch);
-
-    if ($err) {
-        error_log("Error de Resend: " . $err);
-        return false;
+// Obtener paquetes configurados si existen
+$paquetes = [];
+try {
+    $stmt_paq_list = $pdo->query("SELECT * FROM configuracion_precios WHERE tipo_item = 'paquete'");
+    if ($stmt_paq_list) {
+        $paquetes = $stmt_paq_list->fetchAll();
     }
+} catch (Exception $e) {
+    // Si la tabla no existe o hay error, se ignora para evitar romper la página
+}
 
-    return true;
+// Función limpia para enviar el correo mediante la API HTTP de Resend
+function enviarFacturaCorreo($email_destino, $nombre_cliente, $num_factura, $nombre_paquete, $cant_mesas, $cant_sillas, $costo_total, $observaciones) {
+    $fecha_actual = date('d/m/Y h:i A');
+    $asunto = "Comprobante de Alquiler N° #" . str_pad($num_factura, 6, "0", STR_PAD_LEFT);
 
     // Plantilla HTML de la factura
     $mensaje_html = "
@@ -63,11 +39,11 @@ $precio_silla = 1.00;
         <div style='max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
             <div style='border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px;'>
                 <h2 style='color: #2563eb; margin: 0;'>CONTROL MOBILIARIO</h2>
-                <small style='color: #64748b;'>Comprobante Oficial N° #$num_factura ($fecha_actual)</small>
+                <small style='color: #64748b;'>Comprobante Oficial N° #" . str_pad($num_factura, 6, "0", STR_PAD_LEFT) . " ({$fecha_actual})</small>
             </div>
 
-            <p>Estimado/a <strong>$nombre_cliente</strong>,</p>
-            <p>Se ha generado el recibo oficial correspondiente a su alquiler de mobiliario:</p>
+            <p>Estimado/a <strong>{$nombre_cliente}</strong>,</p>
+            <p>Se ha generado el recibo oficial correspondiente su alquiler de mobiliario:</p>
 
             <table style='width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;'>
                 <thead>
@@ -79,19 +55,19 @@ $precio_silla = 1.00;
                 <tbody>
                     <tr>
                         <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>Modalidad</td>
-                        <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'><strong>$nombre_paquete</strong></td>
+                        <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'><strong>{$nombre_paquete}</strong></td>
                     </tr>
                     <tr>
                         <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>Mesas Contratadas</td>
-                        <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>$cant_mesas ($2.00 USD c/u)</td>
+                        <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>{$cant_mesas} (\$2.00 USD c/u)</td>
                     </tr>
                     <tr>
                         <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>Sillas Contratadas</td>
-                        <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>$cant_sillas ($1.00 USD c/u)</td>
+                        <td style='padding: 10px; border-bottom: 1px solid #e2e8f0;'>{$cant_sillas} (\$1.00 USD c/u)</td>
                     </tr>
                     <tr style='font-size: 16px; font-weight: bold; color: #16a34a; background-color: #f0fdf4;'>
                         <td style='padding: 12px 10px;'>TOTAL NETO:</td>
-                        <td style='padding: 12px 10px;'>$" . number_format($costo_total, 2) . " USD</td>
+                        <td style='padding: 12px 10px;'>\$" . number_format($costo_total, 2) . " USD</td>
                     </tr>
                 </tbody>
             </table>
@@ -104,15 +80,13 @@ $precio_silla = 1.00;
             <p style='font-size: 11px; color: #94a3b8; text-align: center;'>Comprobante emitido automáticamente por Control Mobiliario.</p>
         </div>
     </body>
-    </html>
-    ";
+    </html>";
 
- // Envío de correo mediante la API HTTP de Resend
-    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq'; // Tu API Key actual de Resend
+    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq';
 
     $data = [
         'from'    => 'Control Mobiliario <onboarding@resend.dev>',
-        'to'      => [$email_destino], // Lee la dirección ingresada en el formulario
+        'to'      => [$email_destino],
         'subject' => $asunto,
         'html'    => $mensaje_html
     ];
@@ -180,15 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
             $ultimo_id_recibo = $pdo->lastInsertId();
 
             // Descontar inventario
-            // Descontar inventario
-if ($cantidad_mesas > 0) {
-    $stmt_mesa = $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'Mesa'");
-    $stmt_mesa->execute([$cantidad_mesas, $cantidad_mesas]);
-}
-if ($cantidad_sillas > 0) {
-    $stmt_silla = $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'Silla'");
-    $stmt_silla->execute([$cantidad_sillas, $cantidad_sillas]);
-}
+            if ($cantidad_mesas > 0) {
+                $stmt_mesa = $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'Mesa'");
+                $stmt_mesa->execute([$cantidad_mesas, $cantidad_mesas]);
+            }
+            if ($cantidad_sillas > 0) {
+                $stmt_silla = $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'Silla'");
+                $stmt_silla->execute([$cantidad_sillas, $cantidad_sillas]);
+            }
 
             $pdo->commit();
 
@@ -197,7 +170,7 @@ if ($cantidad_sillas > 0) {
                 enviarFacturaCorreo($email_cliente, $solicitante, $ultimo_id_recibo, $nombre_paquete, $cantidad_mesas, $cantidad_sillas, $costo_total, $observaciones);
             }
 
-            $mensaje = "¡Alquiler registrado exitosamente! Se ha despachado la factura por correo a <strong>" . htmlspecialchars($email_cliente) . "</strong> y copia de respaldo a <strong>aquiror608@gmail.com</strong>.";
+            $mensaje = "¡Alquiler registrado exitosamente! Se ha despachado la factura por correo a <strong>" . htmlspecialchars($email_cliente) . "</strong>.";
 
         } catch (Exception $ex) {
             $pdo->rollBack();
@@ -207,7 +180,7 @@ if ($cantidad_sillas > 0) {
 }
 
 // Consultar lista
-$alquileres = $pdo->query("SELECT /* refresh_cache */ * FROM prestamos ORDER BY id DESC");
+$alquileres = $pdo->query("SELECT * FROM prestamos ORDER BY id DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -289,7 +262,7 @@ $alquileres = $pdo->query("SELECT /* refresh_cache */ * FROM prestamos ORDER BY 
                                 <option value="unitario">-- Elección Libre (Unitario) --</option>
                                 <?php foreach ($paquetes as $paq): ?>
                                     <option value="<?= $paq['id'] ?>">
-                                        <?= $paq['concepto'] ?> ($<?= number_format($paq['precio'], 2) ?>)
+                                        <?= htmlspecialchars($paq['concepto']) ?> ($<?= number_format($paq['precio'], 2) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -342,7 +315,7 @@ $alquileres = $pdo->query("SELECT /* refresh_cache */ * FROM prestamos ORDER BY 
                                             </td>
                                             <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($a['detalle_paquete'] ?? 'Unitario Libre') ?></span></td>
                                             <td class="fw-bold text-success">$<?= number_format($a['costo_total'] ?? 0, 2) ?> USD</td>
-                                            <td><span class="badge bg-warning text-dark"><?= $a['estado'] ?></span></td>
+                                            <td><span class="badge bg-warning text-dark"><?= htmlspecialchars($a['estado']) ?></span></td>
                                             <td class="text-center">
                                                 <a href="recibo.php?id=<?= $a['id'] ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="fa-solid fa-receipt me-1"></i> Ver Recibo</a>
                                             </td>
