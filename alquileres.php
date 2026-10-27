@@ -168,12 +168,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
             $ultimo_id_recibo = $pdo->lastInsertId();
 
             // Descontar inventario
-            if ($cantidad_mesas > 0) {
-                $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'mesa'")->execute([$cantidad_mesas, $cantidad_mesas]);
-            }
-            if ($cantidad_sillas > 0) {
-                $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'silla'")->execute([$cantidad_sillas, $cantidad_sillas]);
-            }
+            // Descontar inventario
+if ($cantidad_mesas > 0) {
+    $stmt_mesa = $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'Mesa'");
+    $stmt_mesa->execute([$cantidad_mesas, $cantidad_mesas]);
+}
+if ($cantidad_sillas > 0) {
+    $stmt_silla = $pdo->prepare("UPDATE inventario_recursos SET cantidad_disponible = cantidad_disponible - ?, cantidad_prestada = cantidad_prestada + ? WHERE tipo = 'Silla'");
+    $stmt_silla->execute([$cantidad_sillas, $cantidad_sillas]);
+}
 
             $pdo->commit();
 
