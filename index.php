@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Consultar stock de recursos
-$stmt = $pdo->query("SELECT * FROM inventario_recursos");
+$resultado = $pdo->query("SELECT /* refresh_cache */ * FROM inventario_recursos");
 $recursos = [];
 while ($row = $stmt->fetch()) {
     $recursos[$row['tipo']] = $row;
