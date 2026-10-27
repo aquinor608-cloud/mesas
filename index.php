@@ -33,7 +33,7 @@ try {
 }
 
 // Consulta de préstamos activos
-$ultimos_prestamos = $pdo->query("SELECT * FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY fecha_prestamo DESC LIMIT 5")->fetchAll();
+$ultimos_prestamos = $pdo->query("SELECT * FROM prestamos /* fix_cache */ WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY fecha_prestamo DESC LIMIT 5");
 ?>
 <!DOCTYPE html>
 <html lang="es">
