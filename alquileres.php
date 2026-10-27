@@ -82,7 +82,7 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $num_factura, $nom
     </body>
     </html>";
 
-    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq';
+    $api_key = 're_5nv5HXxc_6osEYzB7punccEx1iCuivZnB';
 
     $data = [
         'from'    => 'Control Mobiliario <onboarding@resend.dev>',
