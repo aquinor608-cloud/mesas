@@ -93,14 +93,15 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
             $mail = new PHPMailer(true);
             
             // Configuración del servidor SMTP (Ajustar con tus datos de Gmail o Brevo si usas SMTP)
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'aquiror608@gmail.com'; 
-            $mail->Password   = 'ufvlnuuicuituncr'; 
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            $mail->CharSet    = 'UTF-8';
+           // Configuración del servidor SMTP con SSL (Puerto 465)
+$mail->isSMTP();
+$mail->Host       = 'smtp.gmail.com';
+$mail->SMTPAuth   = true;
+$mail->Username   = 'aquinor608@gmail.com';
+$mail->Password   = 'ufvlnuuicuituncr'; // Tu contraseña de aplicación de Gmail
+$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // Cambiamos a SMTPS
+$mail->Port       = 465;                        // Puerto 465
+$mail->CharSet    = 'UTF-8';
 
             $mail->setFrom('aquiror608@gmail.com', 'Control Mobiliario');
             $mail->addAddress($email_destino, $nombre_cliente); // Envío al cliente
