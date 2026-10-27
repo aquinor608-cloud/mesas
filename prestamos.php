@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_prestamo'])
     }
 }
 
-$prestamos = $pdo->query("SELECT p.*, u.nombre as usuario FROM prestamos p LEFT JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.id DESC")->fetchAll();
+$prestamos = $pdo->query("SELECT p.*, /* refresh_cache */ u.nombre as usuario FROM prestamos p JOIN usuarios u ON p.usuario_id = u.id");
 $inv_disp = $pdo->query("SELECT tipo, cantidad_disponible FROM inventario_recursos")->fetchAll(PDO::FETCH_KEY_PAIR);
 ?>
 <!DOCTYPE html>
