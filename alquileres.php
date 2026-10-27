@@ -87,27 +87,35 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
     </html>
     ";
 
-    // Intento 1: Intentar envío mediante PHPMailer con SMTP si existen credenciales
-   try {
-        $headers  = "MIME-Version: 1.0" . "\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        $headers .= "From: Control Mobiliario <no-reply@control-mobiliario.onrender.com>" . "\r\n";
-        $headers .= "Reply-To: " . $tu_correo . "\r\n";
-        $headers .= "Bcc: " . $tu_correo . "\r\n"; // Te envía una copia oculta a ti
+ // Envío de correo mediante la API HTTP de Resend (100% compatible con Render)
+    $api_key = 're_NbuC9PG4_5KYAqgrJs12qdVvMDZkmdseq'; // Pega aquí tu clave que empieza por re_
 
-        $exito = @mail($email_destino, $asunto, $mensaje_html, $headers);
-        return $exito;
-    } catch (Exception $e) {
-        error_log("Error de correo nativo: " . $e->getMessage());
+    $data = [
+        'from' => 'Control Mobiliario <onboarding@resend.dev>',
+        'to'   => [$email_destino, $tu_correo],
+        'subject' => $asunto,
+        'html' => $mensaje_html
+    ];
+
+    $ch = curl_init('https://api.resend.com/emails');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $api_key,
+        'Content-Type: application/json'
+    ]);
+
+    $response = curl_exec($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        error_log("Error de Resend: " . $err);
         return false;
     }
-    // Intento 2: Fallback con la función mail() nativa de PHP
-    $headers  = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: Control Mobiliario <no-reply@controlmobiliario.com>\r\n";
-    $headers .= "Bcc: $tu_correo\r\n";
 
-    return @mail($email_destino, $asunto, $mensaje_html, $headers);
+    return true;
 }
 
 // Procesar alquiler
