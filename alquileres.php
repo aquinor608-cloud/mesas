@@ -112,9 +112,9 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
 
             return $mail->send();
         } catch (Exception $e) {
-            // Muestra el error exacto en pantalla si Gmail rechaza la conexión
-            die("Error exacto de PHPMailer: " . $e->getMessage());
-        }
+        // Si falla SMTP, no detenemos el sistema; permitimos que continúe con el siguiente intento
+        // error_log("Error PHPMailer: " . $e->getMessage());
+    }
     }
 
     // Intento 2: Fallback con la función mail() nativa de PHP
