@@ -88,36 +88,19 @@ function enviarFacturaCorreo($email_destino, $nombre_cliente, $id_recibo, $nombr
     ";
 
     // Intento 1: Intentar envío mediante PHPMailer con SMTP si existen credenciales
-    if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-        try {
-            $mail = new PHPMailer(true);
-            
-            // Configuración del servidor SMTP (Ajustar con tus datos de Gmail o Brevo si usas SMTP)
-           // Configuración del servidor SMTP con SSL (Puerto 465)
-$mail->isSMTP();
-$mail->Host       = 'smtp.gmail.com';
-$mail->SMTPAuth   = true;
-$mail->Username   = 'aquinor608@gmail.com';
-$mail->Password   = 'ufvlnuuicuituncr'; // Tu contraseña de aplicación de Gmail
-$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // Cambiamos a SMTPS
-$mail->Port       = 465;                        // Puerto 465
-$mail->CharSet    = 'UTF-8';
+   try {
+        $headers  = "MIME-Version: 1.0" . "\r\n";
+        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+        $headers .= "From: Control Mobiliario <no-reply@control-mobiliario.onrender.com>" . "\r\n";
+        $headers .= "Reply-To: " . $tu_correo . "\r\n";
+        $headers .= "Bcc: " . $tu_correo . "\r\n"; // Te envía una copia oculta a ti
 
-            $mail->setFrom('aquiror608@gmail.com', 'Control Mobiliario');
-            $mail->addAddress($email_destino, $nombre_cliente); // Envío al cliente
-            $mail->addBCC($tu_correo); // Copia oculta a ti
-
-            $mail->isHTML(true);
-            $mail->Subject = $asunto;
-            $mail->Body    = $mensaje_html;
-
-            return $mail->send();
-        } catch (Exception $e) {
-        // Si falla SMTP, no detenemos el sistema; permitimos que continúe con el siguiente intento
-        // error_log("Error PHPMailer: " . $e->getMessage());
+        $exito = @mail($email_destino, $asunto, $mensaje_html, $headers);
+        return $exito;
+    } catch (Exception $e) {
+        error_log("Error de correo nativo: " . $e->getMessage());
+        return false;
     }
-    }
-
     // Intento 2: Fallback con la función mail() nativa de PHP
     $headers  = "MIME-Version: 1.0\r\n";
     $headers .= "Content-type: text/html; charset=UTF-8\r\n";
