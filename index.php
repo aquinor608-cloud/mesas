@@ -6,17 +6,16 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Consultar stock de recursos
-$stmt = $pdo->query("SELECT /* refresh_cache */ * FROM inventario_recursos");
-$resultado = $stmt->fetch();
+// Consultar stock de recursos de forma correcta e insensible a mayúsculas
+$stmt = $pdo->query("SELECT * FROM inventario_recursos");
+$todos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $recursos = [];
-while ($row = $stmt->fetch()) {
-    $recursos[$row['tipo']] = $row;
+foreach ($todos as $row) {
+    $recursos[strtolower(trim($row['tipo']))] = $row;
 }
 
 $mesas = $recursos['mesa'] ?? ['cantidad_total' => 20000, 'cantidad_disponible' => 20000, 'cantidad_prestada' => 0, 'cantidad_reservada' => 0];
 $sillas = $recursos['silla'] ?? ['cantidad_total' => 30000, 'cantidad_disponible' => 30000, 'cantidad_prestada' => 0, 'cantidad_reservada' => 0];
-
 // Calcular porcentajes de disponibilidad
 $pct_mesas = $mesas['cantidad_total'] > 0 ? round(($mesas['cantidad_disponible'] / $mesas['cantidad_total']) * 100) : 0;
 $pct_sillas = $sillas['cantidad_total'] > 0 ? round(($sillas['cantidad_disponible'] / $sillas['cantidad_total']) * 100) : 0;
