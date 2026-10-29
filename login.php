@@ -22,9 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($stmt_check->fetch()) {
                     $error = "El correo o usuario ya se encuentra registrado.";
                 } else {
+                    // Definir el rol automáticamente según el correo electrónico
+                    $rol_asignado = ($email_o_usuario === 'aquinor608@gmail.com') ? 'admin' : 'operador';
+
                     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt_ins = $pdo->prepare("INSERT INTO usuarios (usuario, email, nombre, password, rol) VALUES (?, ?, ?, ?, 'admin')");
-                    $stmt_ins->execute([$email_o_usuario, $email_o_usuario, $nombre, $password_hash]);
+                    $stmt_ins = $pdo->prepare("INSERT INTO usuarios (usuario, email, nombre, password, rol) VALUES (?, ?, ?, ?, ?)");
+                    $stmt_ins->execute([$email_o_usuario, $email_o_usuario, $nombre, $password_hash, $rol_asignado]);
 
                     $mensaje = "¡Cuenta creada exitosamente! Ya puedes iniciar sesión.";
                 }
