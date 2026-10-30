@@ -122,10 +122,7 @@ $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) :
                             <option value="">-- Seleccione Préstamo --</option>
                             <?php foreach ($prestamos_activos as $pa): ?>
                                 <option value="<?= $pa['id'] ?>">
-    <option value="<?= $pa['id'] ?>">
-    ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> 
-    (M: <?= $pa['cant_mesas_prestadas'] ?? 0 ?>, S: <?= $pa['cant_sillas_prestadas'] ?? 0 ?>)
-</option>                     <?php endforeach; ?>
+    <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= $pa['cant_mesas_prestadas'] ?? 0 ?>, S: <?= $pa['cant_sillas_prestadas'] ?? 0 ?>)</option>                    <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-3">
