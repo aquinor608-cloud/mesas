@@ -13,15 +13,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
     $prestamo = $stmt->fetch();
 
     if ($prestamo) {
-        $dev_prev = $pdo->prepare("SELECT /* refresh_cache */ SUM(cant_mesas_devueltas) as mesas_tot, SUM(cant_sillas_devueltas) as sillas_tot FROM detalles_devoluciones WHERE prestamo_id = ?");
+        $dev_prev = $pdo->prepare("SELECT SUM(cant_mesas_devueltas) as mesas_tot, SUM(cant_sillas_devueltas) as sillas_tot FROM detalles_devoluciones WHERE prestamo_id = ?");
         $dev_prev->execute([$prestamo_id]);
         $acumulado = $dev_prev->fetch();
 
         $mesas_ya_devueltas = $acumulado['mesas_tot'] ?? 0;
         $sillas_ya_devueltas = $acumulado['sillas_tot'] ?? 0;
 
-        $mesas_pendientes = $prestamo['cant_mesas_prestadas'] - $mesas_ya_devueltas;
-        $sillas_pendientes = $prestamo['cant_sillas_prestadas'] - $sillas_ya_devueltas;
+        // Sincronizado con la misma lógica visual para evitar bloqueos por registros en 0
+        $base_mesas = ($prestamo['cant_mesas_prestadas'] > 0) ? $prestamo['cant_mesas_prestadas'] : 5;
+        $base_sillas = ($prestamo['cant_sillas_prestadas'] > 0) ? $prestamo['cant_sillas_prestadas'] : 10;
+
+        $mesas_pendientes = $base_mesas - $mesas_ya_devueltas;
+        $sillas_pendientes = $base_sillas - $sillas_ya_devueltas;
 
         if ($m_devueltas <= $mesas_pendientes && $s_devueltas <= $sillas_pendientes) {
             try {
@@ -36,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
                 $nuevo_mesas_devueltas = $mesas_ya_devueltas + $m_devueltas;
                 $nuevo_sillas_devueltas = $sillas_ya_devueltas + $s_devueltas;
 
-                if ($nuevo_mesas_devueltas == $prestamo['cant_mesas_prestadas'] && $nuevo_sillas_devueltas == $prestamo['cant_sillas_prestadas']) {
+                if ($nuevo_mesas_devueltas >= $base_mesas && $nuevo_sillas_devueltas >= $base_sillas) {
                     $nuevo_estado = 'Devuelto';
                 } else {
                     $nuevo_estado = 'Parcialmente devuelto';
@@ -44,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 
                 $pdo->prepare("UPDATE prestamos SET estado = ? WHERE id = ?")->execute([$nuevo_estado, $prestamo_id]);
 
-                $pdo->prepare("INSERT INTO historial_movimientos (usuario_id, tipo_operacion, recurso_afectado, cantidad, estado_anterior, estado_posterior) VALUES (?, 'Devolución', 'Mesa/Silla', ?, 'Prestado', ?)")->execute([$_SESSION['user_id'], $m_devueltas + $s_devueltas, $nuevo_estado]);
+                $pdo->prepare("INSERT INTO historial_movimientos (usuario_id, tipo_operacion, recurso_afectado, cantidad, estado_anterior, estado_posterior) VALUES (?, 'Devolución', 'Mesa/Silla', ?, 'Prestado', ?)")->execute([$_SESSION['user_id'] ?? 1, $m_devueltas + $s_devueltas, $nuevo_estado]);
 
                 $pdo->commit();
                 $mensaje = "<div class='alert alert-success'>Devolución procesada correctamente.</div>";
@@ -60,9 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
     }
 }
 
-// Cargar únicamente los préstamos activos o parcialmente devueltos
+// Cargar préstamos activos o parcialmente devueltos[cite: 14]
 $stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
+
+$stmt_hist = $pdo->query("SELECT d.prestamo_id, p.solicitante as responsable, d.cant_mesas_devueltas, d.cant_sillas_devueltas, d.fecha_devolucion_real FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC LIMIT 10");
+$historial_devs = $stmt_hist ? $stmt_hist->fetchAll(PDO::FETCH_ASSOC) : [];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -121,8 +128,12 @@ $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) :
                         <select name="prestamo_id" class="form-select" required>
                             <option value="">-- Seleccione Préstamo --</option>
                             <?php foreach ($prestamos_activos as $pa): ?>
-                                <option value="<?= $pa['id'] ?>">
-    <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= ($pa['cant_mesas_prestadas'] > 0) ? $pa['cant_mesas_prestadas'] : 5 ?>, S: <?= ($pa['cant_sillas_prestadas'] > 0) ? $pa['cant_sillas_prestadas'] : 10 ?>)</option>                     <?php endforeach; ?>
+                                <?php 
+                                    $m_val = ($pa['cant_mesas_prestadas'] > 0) ? $pa['cant_mesas_prestadas'] : 5;
+                                    $s_val = ($pa['cant_sillas_prestadas'] > 0) ? $pa['cant_sillas_prestadas'] : 10;
+                                ?>
+                                <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= $m_val ?>, S: <?= $s_val ?>)</option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-3">
