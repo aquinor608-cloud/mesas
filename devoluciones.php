@@ -61,10 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 }
 
 // Cargar únicamente los préstamos activos o parcialmente devueltos
-$stmt_activos = $pdo->query("SELECT p.*, 
-    COALESCE(p.cant_mesas_prestadas, p.mesas, p.cantidad_mesas, 0) as total_mesas,
-    COALESCE(p.cant_sillas_prestadas, p.sillas, p.cantidad_sillas, 0) as total_sillas
-    FROM prestamos p WHERE p.estado IN ('Activo', 'Parcialmente devuelto') ORDER BY p.id DESC");
+$stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
 ?>
 <!DOCTYPE html>
@@ -126,10 +123,9 @@ $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) :
                             <?php foreach ($prestamos_activos as $pa): ?>
                                 <option value="<?= $pa['id'] ?>">
     <option value="<?= $pa['id'] ?>">
-    ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? $pa['responsable'] ?? 'Sin nombre') ?> 
-    (M: <?= $pa['total_mesas'] ?>, S: <?= $pa['total_sillas'] ?>)
-</option>
-                            <?php endforeach; ?>
+    ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> 
+    (M: <?= $pa['cant_mesas_prestadas'] ?? 0 ?>, S: <?= $pa['cant_sillas_prestadas'] ?? 0 ?>)
+</option>                     <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-3">
