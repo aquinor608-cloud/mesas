@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 }
 
 // Cargar únicamente los préstamos activos o parcialmente devueltos
-$stmt_activos = $pdo->query("SELECT id, solicitante, cantidad_mesas, cantidad_sillas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
+$stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll() : [];
 $historial_devs = $pdo->query("SELECT d.*, p.solicitante as responsable FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC")->fetchAll();
 ?>
@@ -122,7 +122,7 @@ $historial_devs = $pdo->query("SELECT d.*, p.solicitante as responsable FROM det
                         <select name="prestamo_id" class="form-select" required>
                             <option value="">-- Seleccione Préstamo --</option>
                             <?php foreach ($prestamos_activos as $pa): ?>
-                                <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= $pa['cant_mesas_prestadas'] ?>, S: <?= $pa['cant_sillas_prestadas'] ?>)</option>
+                                <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= $pa['cant_mesas_prestadas'] ?? 0 ?>, S: <?= $pa['cant_sillas_prestadas'] ?? 0 ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
