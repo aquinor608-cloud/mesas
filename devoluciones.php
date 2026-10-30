@@ -123,7 +123,7 @@ $historial_devs = $pdo->query("SELECT d.*, p.solicitante as responsable FROM det
                         <select name="prestamo_id" class="form-select" required>
                             <option value="">-- Seleccione Préstamo --</option>
                             <?php foreach ($prestamos_activos as $pa): ?>
-                                <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['responsable']) ?> (M: <?= $pa['cant_mesas_prestadas'] ?>, S: <?= $pa['cant_sillas_prestadas'] ?>)</option>
+                                <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= $pa['cant_mesas_prestadas'] ?>, S: <?= $pa['cant_sillas_prestadas'] ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
