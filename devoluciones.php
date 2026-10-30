@@ -61,7 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 }
 
 // Cargar únicamente los préstamos activos o parcialmente devueltos
-$stmt_activos = $pdo->query("SELECT * FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
+$stmt_activos = $pdo->query("SELECT p.*, 
+    COALESCE(p.cant_mesas_prestadas, p.mesas, p.cantidad_mesas, 0) as total_mesas,
+    COALESCE(p.cant_sillas_prestadas, p.sillas, p.cantidad_sillas, 0) as total_sillas
+    FROM prestamos p WHERE p.estado IN ('Activo', 'Parcialmente devuelto') ORDER BY p.id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
 ?>
 <!DOCTYPE html>
@@ -124,8 +127,7 @@ $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) :
                                 <option value="<?= $pa['id'] ?>">
     <option value="<?= $pa['id'] ?>">
     ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? $pa['responsable'] ?? 'Sin nombre') ?> 
-    (M: <?= $pa['cant_mesas_prestadas'] ?? $pa['mesas_prestadas'] ?? $pa['cantidad_mesas'] ?? $pa['mesas'] ?? 0 ?>, 
-     S: <?= $pa['cant_sillas_prestadas'] ?? $pa['sillas_prestadas'] ?? $pa['cantidad_sillas'] ?? $pa['sillas'] ?? 0 ?>)
+    (M: <?= $pa['total_mesas'] ?>, S: <?= $pa['total_sillas'] ?>)
 </option>
                             <?php endforeach; ?>
                         </select>
