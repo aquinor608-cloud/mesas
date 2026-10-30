@@ -61,9 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 }
 
 // Cargar únicamente los préstamos activos o parcialmente devueltos
-$stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
+$stmt_activos = $pdo->query("SELECT id, solicitante, cantidad_mesas, cantidad_sillas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll() : [];
-
 $historial_devs = $pdo->query("SELECT d.*, p.solicitante as responsable FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
