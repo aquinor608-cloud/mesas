@@ -10,22 +10,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 
     $stmt = $pdo->prepare("SELECT * FROM prestamos WHERE id = ? AND estado IN ('Activo', 'Parcialmente devuelto')");
     $stmt->execute([$prestamo_id]);
-    $prestamo = $stmt->fetch();
+    $prestamo = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($prestamo) {
         $dev_prev = $pdo->prepare("SELECT SUM(cant_mesas_devueltas) as mesas_tot, SUM(cant_sillas_devueltas) as sillas_tot FROM detalles_devoluciones WHERE prestamo_id = ?");
         $dev_prev->execute([$prestamo_id]);
-        $acumulado = $dev_prev->fetch();
+        $acumulado = $dev_prev->fetch(PDO::FETCH_ASSOC);
 
         $mesas_ya_devueltas = $acumulado['mesas_tot'] ?? 0;
         $sillas_ya_devueltas = $acumulado['sillas_tot'] ?? 0;
 
-        // Sincronizado con la misma lógica visual para evitar bloqueos por registros en 0
-        $base_mesas = ($prestamo['cant_mesas_prestadas'] > 0) ? $prestamo['cant_mesas_prestadas'] : 5;
-        $base_sillas = ($prestamo['cant_sillas_prestadas'] > 0) ? $prestamo['cant_sillas_prestadas'] : 10;
+        // Detectar automáticamente el nombre real de la columna en la base de datos
+        $real_mesas = $prestamo['cant_mesas_prestadas'] ?? $prestamo['mesas'] ?? $prestamo['cantidad_mesas'] ?? $prestamo['mesas_prestadas'] ?? 0;
+        $real_sillas = $prestamo['cant_sillas_prestadas'] ?? $prestamo['sillas'] ?? $prestamo['cantidad_sillas'] ?? $prestamo['sillas_prestadas'] ?? 0;
 
-        $mesas_pendientes = $base_mesas - $mesas_ya_devueltas;
-        $sillas_pendientes = $base_sillas - $sillas_ya_devueltas;
+        $mesas_pendientes = $real_mesas - $mesas_ya_devueltas;
+        $sillas_pendientes = $real_sillas - $sillas_ya_devueltas;
 
         if ($m_devueltas <= $mesas_pendientes && $s_devueltas <= $sillas_pendientes) {
             try {
@@ -40,15 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
                 $nuevo_mesas_devueltas = $mesas_ya_devueltas + $m_devueltas;
                 $nuevo_sillas_devueltas = $sillas_ya_devueltas + $s_devueltas;
 
-                if ($nuevo_mesas_devueltas >= $base_mesas && $nuevo_sillas_devueltas >= $base_sillas) {
+                if ($nuevo_mesas_devueltas >= $real_mesas && $nuevo_sillas_devueltas >= $real_sillas) {
                     $nuevo_estado = 'Devuelto';
                 } else {
                     $nuevo_estado = 'Parcialmente devuelto';
                 }
 
                 $pdo->prepare("UPDATE prestamos SET estado = ? WHERE id = ?")->execute([$nuevo_estado, $prestamo_id]);
-
-                $pdo->prepare("INSERT INTO historial_movimientos (usuario_id, tipo_operacion, recurso_afectado, cantidad, estado_anterior, estado_posterior) VALUES (?, 'Devolución', 'Mesa/Silla', ?, 'Prestado', ?)")->execute([$_SESSION['user_id'] ?? 1, $m_devueltas + $s_devueltas, $nuevo_estado]);
 
                 $pdo->commit();
                 $mensaje = "<div class='alert alert-success'>Devolución procesada correctamente.</div>";
@@ -64,12 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
     }
 }
 
-// Cargar préstamos activos o parcialmente devueltos[cite: 14]
-$stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
-$prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
-
-// Cargar préstamos activos o parcialmente devueltos[cite: 14]
-$stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
+// Cargar todos los datos de los préstamos activos con SELECT * para capturar cualquier nombre de columna
+$stmt_activos = $pdo->query("SELECT * FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
 
 $stmt_hist = $pdo->query("SELECT d.prestamo_id, p.solicitante as responsable, d.cant_mesas_devueltas, d.cant_sillas_devueltas, d.id FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC LIMIT 10");
@@ -133,8 +127,8 @@ $historial_devs = $stmt_hist ? $stmt_hist->fetchAll(PDO::FETCH_ASSOC) : [];
                             <option value="">-- Seleccione Préstamo --</option>
                             <?php foreach ($prestamos_activos as $pa): ?>
                                 <?php 
-                                    $m_val = ($pa['cant_mesas_prestadas'] > 0) ? $pa['cant_mesas_prestadas'] : 5;
-                                    $s_val = ($pa['cant_sillas_prestadas'] > 0) ? $pa['cant_sillas_prestadas'] : 10;
+                                    $m_val = $pa['cant_mesas_prestadas'] ?? $pa['mesas'] ?? $pa['cantidad_mesas'] ?? $pa['mesas_prestadas'] ?? 0;
+                                    $s_val = $pa['cant_sillas_prestadas'] ?? $pa['sillas'] ?? $pa['cantidad_sillas'] ?? $pa['sillas_prestadas'] ?? 0;
                                 ?>
                                 <option value="<?= $pa['id'] ?>">ID: <?= $pa['id'] ?> - <?= htmlspecialchars($pa['solicitante'] ?? 'Sin nombre') ?> (M: <?= $m_val ?>, S: <?= $s_val ?>)</option>
                             <?php endforeach; ?>
@@ -168,21 +162,21 @@ $historial_devs = $stmt_hist ? $stmt_hist->fetchAll(PDO::FETCH_ASSOC) : [];
                             <th>ID Préstamo</th>
                             <th>Responsable</th>
                             <th>Devueltos</th>
-                            <th>Fecha</th>
+                            <th>Registro</th>
                         </tr>
                     </thead>
                     <tbody>
-    <?php if (empty($historial_devs)): ?>
-        <tr><td colspan="4" class="text-center text-muted">No hay devoluciones registradas.</td></tr>
-    <?php else: foreach ($historial_devs as $hd): ?>
-        <tr>
-            <td><?= $hd['prestamo_id'] ?></td>
-            <td><strong><?= htmlspecialchars($hd['responsable']) ?></strong></td>
-            <td><span class="badge bg-success">M: <?= $hd['cant_mesas_devueltas'] ?></span> <span class="badge bg-info">S: <?= $hd['cant_sillas_devueltas'] ?></span></td>
-            <td class="small">ID Registro: <?= $hd['id'] ?></td>
-        </tr>
-    <?php endforeach; endif; ?>
-</tbody>
+                        <?php if (empty($historial_devs)): ?>
+                            <tr><td colspan="4" class="text-center text-muted">No hay devoluciones registradas.</td></tr>
+                        <?php else: foreach ($historial_devs as $hd): ?>
+                            <tr>
+                                <td><?= $hd['prestamo_id'] ?></td>
+                                <td><strong><?= htmlspecialchars($hd['responsable']) ?></strong></td>
+                                <td><span class="badge bg-success">M: <?= $hd['cant_mesas_devueltas'] ?></span> <span class="badge bg-info">S: <?= $hd['cant_sillas_devueltas'] ?></span></td>
+                                <td class="small">ID: <?= $hd['id'] ?></td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
                 </table>
             </div>
         </div>
