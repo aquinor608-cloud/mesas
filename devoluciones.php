@@ -68,7 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_devolucion'
 $stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
 $prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
 
-$stmt_hist = $pdo->query("SELECT d.prestamo_id, p.solicitante as responsable, d.cant_mesas_devueltas, d.cant_sillas_devueltas, d.fecha_devolucion_real FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC LIMIT 10");
+// Cargar préstamos activos o parcialmente devueltos[cite: 14]
+$stmt_activos = $pdo->query("SELECT id, solicitante, cant_mesas_prestadas, cant_sillas_prestadas FROM prestamos WHERE estado IN ('Activo', 'Parcialmente devuelto') ORDER BY id DESC");
+$prestamos_activos = $stmt_activos ? $stmt_activos->fetchAll(PDO::FETCH_ASSOC) : [];
+
+$stmt_hist = $pdo->query("SELECT d.prestamo_id, p.solicitante as responsable, d.cant_mesas_devueltas, d.cant_sillas_devueltas, d.id FROM detalles_devoluciones d JOIN prestamos p ON d.prestamo_id = p.id ORDER BY d.id DESC LIMIT 10");
 $historial_devs = $stmt_hist ? $stmt_hist->fetchAll(PDO::FETCH_ASSOC) : [];
 ?>
 <!DOCTYPE html>
@@ -168,17 +172,17 @@ $historial_devs = $stmt_hist ? $stmt_hist->fetchAll(PDO::FETCH_ASSOC) : [];
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (empty($historial_devs)): ?>
-                            <tr><td colspan="4" class="text-center text-muted">No hay devoluciones registradas.</td></tr>
-                        <?php else: foreach ($historial_devs as $hd): ?>
-                            <tr>
-                                <td><?= $hd['prestamo_id'] ?></td>
-                                <td><strong><?= htmlspecialchars($hd['responsable']) ?></strong></td>
-                                <td><span class="badge bg-success">M: <?= $hd['cant_mesas_devueltas'] ?></span> <span class="badge bg-info">S: <?= $hd['cant_sillas_devueltas'] ?></span></td>
-                                <td class="small"><?= $hd['fecha_devolucion_real'] ?></td>
-                            </tr>
-                        <?php endforeach; endif; ?>
-                    </tbody>
+    <?php if (empty($historial_devs)): ?>
+        <tr><td colspan="4" class="text-center text-muted">No hay devoluciones registradas.</td></tr>
+    <?php else: foreach ($historial_devs as $hd): ?>
+        <tr>
+            <td><?= $hd['prestamo_id'] ?></td>
+            <td><strong><?= htmlspecialchars($hd['responsable']) ?></strong></td>
+            <td><span class="badge bg-success">M: <?= $hd['cant_mesas_devueltas'] ?></span> <span class="badge bg-info">S: <?= $hd['cant_sillas_devueltas'] ?></span></td>
+            <td class="small">ID Registro: <?= $hd['id'] ?></td>
+        </tr>
+    <?php endforeach; endif; ?>
+</tbody>
                 </table>
             </div>
         </div>
